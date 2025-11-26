@@ -113,6 +113,12 @@
       padding: 4px 8px;
       font-size: 0.8rem;
     }
+    /* Botón eliminar */
+    .btn-delete {
+      background: rgba(239,68,68,0.2);
+      color: #fecaca;
+      border: 1px solid rgba(248,113,113,0.5);
+    }
     .input-row {
       display: flex;
       gap: 8px;
@@ -228,7 +234,6 @@
     function addPlayer(name) {
       const trimmed = name.trim();
       if (!trimmed) return;
-      // Si ya existe, no duplicar
       const exists = players.some(
         (p) => p.name.toLowerCase() === trimmed.toLowerCase()
       );
@@ -243,6 +248,15 @@
       if (index < 0 || index >= players.length) return;
       const newCount = (players[index].count || 0) + delta;
       players[index].count = Math.max(0, newCount);
+      saveToStorage();
+      render();
+    }
+
+    // NUEVO: eliminar jugador
+    function deletePlayer(index) {
+      if (index < 0 || index >= players.length) return;
+      if (!confirm("¿Seguro que querés eliminar este jugador?")) return;
+      players.splice(index, 1);
       saveToStorage();
       render();
     }
@@ -292,9 +306,15 @@
         plusBtn.textContent = "+ vaso";
         plusBtn.onclick = () => updateCount(index, +1);
 
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn-delete";
+        deleteBtn.textContent = "🗑️";
+        deleteBtn.onclick = () => deletePlayer(index);
+
         controls.appendChild(minusBtn);
         controls.appendChild(count);
         controls.appendChild(plusBtn);
+        controls.appendChild(deleteBtn);
 
         row.appendChild(name);
         row.appendChild(controls);
