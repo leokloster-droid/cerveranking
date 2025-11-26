@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>CerveRanking 🍺</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #0f172a;
+      color: #f9fafb;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: #020617;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .card-header {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .card-header span {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.5);
+      color: #e0f2fe;
+    }
+    .players {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .player-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #020617;
+      border: 1px solid rgba(148,163,184,0.3);
+    }
+    .player-name {
+      font-weight: 600;
+    }
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .count {
+      min-width: 30px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.1rem;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: transform 0.05s ease, box-shadow 0.1s ease, background 0.1s ease;
+    }
+    button:active {
+      transform: scale(0.96);
+      box-shadow: none;
+    }
+    .btn-main {
+      background: linear-gradient(135deg,#22c55e,#4ade80);
+      color: #022c22;
+      box-shadow: 0 4px 14px rgba(34,197,94,0.5);
+    }
+    .btn-minus {
+      background: rgba(248,250,252,0.1);
+      color: #f9fafb;
+    }
+    .btn-reset {
+      background: rgba(239,68,68,0.1);
+      color: #fecaca;
+      border: 1px solid rgba(248,113,113,0.5);
+      width: 100%;
+      margin-top: 8px;
+    }
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: #e5e7eb;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px #38bdf8;
+    }
+    .empty {
+      text-align: center;
+      font-size: 0.85rem;
+      opacity: 0.7;
+      padding: 12px 0;
+    }
+    .ranking {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .ranking li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 0.9rem;
+      border-bottom: 1px dashed rgba(148,163,184,0.3);
+    }
+    .ranking li:last-child {
+      border-bottom: none;
+    }
+    .badge {
+      font-size: 0.8rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(251,191,36,0.15);
+      color: #facc15;
+      border: 1px solid rgba(250,204,21,0.5);
+      margin-left: 6px;
+    }
+    @media (min-width: 800px) {
+      .layout {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>CerveRanking 🍺</h1>
+  <div class="subtitle">Sumá un vaso cada vez que alguien se sirve de la chopera.</div>
+
+  <div class="layout">
+    <!-- Panel jugadores -->
+    <div class="card">
+      <div class="card-header">
+        <span>Jugadores</span>
+        <span class="pill">Se guarda en este dispositivo</span>
+      </div>
+
+      <div class="input-row">
+        <input id="nameInput" type="text" placeholder="Nombre del jugador" />
+        <button class="btn-main btn-small" id="addBtn">Agregar</button>
+      </div>
+
+      <div id="playersContainer" class="players"></div>
+
+      <button class="btn-reset" id="resetBtn">Reiniciar todos los contadores</button>
+    </div>
+
+    <!-- Panel ranking -->
+    <div class="card">
+      <div class="card-header">
+        <span>Ranking</span>
+        <span class="pill">Top chupadores 🍻</span>
+      </div>
+      <ul id="rankingList" class="ranking"></ul>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "cerveranking_players_v1";
+
+    let players = [];
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          players = JSON.parse(raw);
+        } else {
+          players = [];
+        }
+      } catch (e) {
+        players = [];
+      }
+    }
+
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
+    }
+
+    function addPlayer(name) {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      // Si ya existe, no duplicar
+      const exists = players.some(
+        (p) => p.name.toLowerCase() === trimmed.toLowerCase()
+      );
+      if (!exists) {
+        players.push({ name: trimmed, count: 0 });
+        saveToStorage();
+        render();
+      }
+    }
+
+    function updateCount(index, delta) {
+      if (index < 0 || index >= players.length) return;
+      const newCount = (players[index].count || 0) + delta;
+      players[index].count = Math.max(0, newCount);
+      saveToStorage();
+      render();
+    }
+
+    function resetAll() {
+      if (!players.length) return;
+      if (!confirm("¿Seguro que querés reiniciar todos los contadores?")) return;
+      players = players.map((p) => ({ ...p, count: 0 }));
+      saveToStorage();
+      render();
+    }
+
+    function renderPlayers() {
+      const container = document.getElementById("playersContainer");
+      container.innerHTML = "";
+
+      if (!players.length) {
+        const div = document.createElement("div");
+        div.className = "empty";
+        div.textContent = "Todavía no hay jugadores. Agregá a tus amigos arriba.";
+        container.appendChild(div);
+        return;
+      }
+
+      players.forEach((player, index) => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+
+        const name = document.createElement("div");
+        name.className = "player-name";
+        name.textContent = player.name;
+
+        const controls = document.createElement("div");
+        controls.className = "player-controls";
+
+        const minusBtn = document.createElement("button");
+        minusBtn.className = "btn-minus";
+        minusBtn.textContent = "−";
+        minusBtn.onclick = () => updateCount(index, -1);
+
+        const count = document.createElement("div");
+        count.className = "count";
+        count.textContent = player.count || 0;
+
+        const plusBtn = document.createElement("button");
+        plusBtn.className = "btn-main";
+        plusBtn.textContent = "+ vaso";
+        plusBtn.onclick = () => updateCount(index, +1);
+
+        controls.appendChild(minusBtn);
+        controls.appendChild(count);
+        controls.appendChild(plusBtn);
+
+        row.appendChild(name);
+        row.appendChild(controls);
+
+        container.appendChild(row);
+      });
+    }
+
+    function renderRanking() {
+      const ul = document.getElementById("rankingList");
+      ul.innerHTML = "";
+
+      if (!players.length) {
+        const li = document.createElement("li");
+        li.className = "empty";
+        li.textContent = "Sin jugadores, sin ranking 😅";
+        ul.appendChild(li);
+        return;
+      }
+
+      const sorted = [...players].sort((a, b) => b.count - a.count);
+
+      sorted.forEach((player, i) => {
+        const li = document.createElement("li");
+
+        const left = document.createElement("div");
+        left.textContent = `${i + 1}. ${player.name}`;
+
+        if (i === 0 && player.count > 0) {
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = "Líder";
+          left.appendChild(badge);
+        }
+
+        const right = document.createElement("div");
+        right.textContent = `${player.count} vasos`;
+
+        li.appendChild(left);
+        li.appendChild(right);
+
+        ul.appendChild(li);
+      });
+    }
+
+    function render() {
+      renderPlayers();
+      renderRanking();
+    }
+
+    // Inicialización
+    loadFromStorage();
+    render();
+
+    const nameInput = document.getElementById("nameInput");
+    const addBtn = document.getElementById("addBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    addBtn.addEventListener("click", () => {
+      addPlayer(nameInput.value);
+      nameInput.value = "";
+      nameInput.focus();
+    });
+
+    nameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        addPlayer(nameInput.value);
+        nameInput.value = "";
+      }
+    });
+
+    resetBtn.addEventListener("click", resetAll);
+  </script>
+</body>
+</html>
