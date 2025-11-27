@@ -176,7 +176,7 @@
     }
   </style>
 
-  <!-- Firebase v8 clásica (muy estable para este caso) -->
+  <!-- Firebase v8 clásica -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -212,6 +212,15 @@
     </div>
   </div>
 
+  <!-- Panel historial -->
+  <div class="card">
+    <div class="card-header">
+      <span>Historial por día</span>
+      <span class="pill">Día y cantidad por persona</span>
+    </div>
+    <div id="historyContainer"></div>
+  </div>
+
   <script>
     // Config de tu proyecto Firebase
     const firebaseConfig = {
@@ -227,8 +236,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const playersRef = db.ref("cerveranking/players");
+    const historyRef = db.ref("cerveranking/history");
 
     let players = [];
+    let historyData = {}; // { playerId: { "YYYY-MM-DD": count } }
 
     function addPlayer(name) {
       const trimmed = name.trim();
@@ -243,11 +254,25 @@
       newRef.set({ name: trimmed, count: 0 });
     }
 
+    function addToHistory(playerId, delta) {
+      // Solo registramos los aumentos (no los restados)
+      if (delta <= 0) return;
+      const today = new Date();
+      const iso = today.toISOString(); // 2025-11-26T...
+      const dateStr = iso.slice(0, 10); // "YYYY-MM-DD"
+
+      const dateRef = historyRef.child(playerId).child(dateStr);
+      dateRef.transaction((current) => {
+        return (current || 0) + delta;
+      });
+    }
+
     function updateCount(index, delta) {
       if (index < 0 || index >= players.length) return;
       const player = players[index];
       const newCount = Math.max(0, (player.count || 0) + delta);
       playersRef.child(player.id).update({ count: newCount });
+      addToHistory(player.id, delta);
     }
 
     function deletePlayer(index) {
@@ -255,6 +280,7 @@
       if (!confirm("¿Seguro que querés eliminar este jugador?")) return;
       const player = players[index];
       playersRef.child(player.id).remove();
+      // El historial queda guardado como registro histórico
     }
 
     function resetAll() {
@@ -263,6 +289,7 @@
       players.forEach((p) => {
         playersRef.child(p.id).update({ count: 0 });
       });
+      // No tocamos el historial
     }
 
     function renderPlayers() {
@@ -356,12 +383,75 @@
       });
     }
 
+    function renderHistory() {
+      const container = document.getElementById("historyContainer");
+      container.innerHTML = "";
+
+      const hasHistory = Object.keys(historyData).length > 0;
+      if (!hasHistory) {
+        const div = document.createElement("div");
+        div.className = "empty";
+        div.textContent = "Todavía no hay historial. Sumá vasos para empezar a registrar.";
+        container.appendChild(div);
+        return;
+      }
+
+      const nameById = {};
+      players.forEach((p) => {
+        nameById[p.id] = p.name;
+      });
+
+      Object.keys(historyData).forEach((playerId) => {
+        const datesObj = historyData[playerId];
+        const wrapper = document.createElement("div");
+        wrapper.style.marginBottom = "10px";
+
+        const title = document.createElement("div");
+        title.style.fontWeight = "600";
+        title.style.marginBottom = "4px";
+        title.textContent = nameById[playerId] || "Jugador (histórico)";
+        wrapper.appendChild(title);
+
+        const list = document.createElement("ul");
+        list.style.listStyle = "none";
+        list.style.paddingLeft = "0";
+        list.style.margin = "0";
+
+        const dates = Object.keys(datesObj).sort().reverse(); // más reciente primero
+
+        dates.forEach((dateStr) => {
+          const li = document.createElement("li");
+          li.style.fontSize = "0.85rem";
+          li.style.display = "flex";
+          li.style.justifyContent = "space-between";
+          li.style.padding = "2px 0";
+
+          const left = document.createElement("span");
+          const parts = dateStr.split("-");
+          const niceDate =
+            parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+          left.textContent = niceDate;
+
+          const right = document.createElement("span");
+          right.textContent = `${datesObj[dateStr]} vasos`;
+
+          li.appendChild(left);
+          li.appendChild(right);
+          list.appendChild(li);
+        });
+
+        wrapper.appendChild(list);
+        container.appendChild(wrapper);
+      });
+    }
+
     function render() {
       renderPlayers();
       renderRanking();
+      renderHistory();
     }
 
-    // Escucha en tiempo real
+    // Escucha en tiempo real de jugadores
     playersRef.on("value", (snapshot) => {
       const data = snapshot.val() || {};
       players = Object.entries(data).map(([id, value]) => ({
@@ -370,6 +460,12 @@
         count: value.count || 0
       }));
       render();
+    });
+
+    // Escucha en tiempo real del historial
+    historyRef.on("value", (snapshot) => {
+      historyData = snapshot.val() || {};
+      renderHistory();
     });
 
     const nameInput = document.getElementById("nameInput");
