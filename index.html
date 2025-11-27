@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>CerveRanking 🍺</title>
+  <title>CerveRanking 🍺 - Global</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
@@ -113,7 +113,6 @@
       padding: 4px 8px;
       font-size: 0.8rem;
     }
-    /* Botón eliminar */
     .btn-delete {
       background: rgba(239,68,68,0.2);
       color: #fecaca;
@@ -176,17 +175,21 @@
       }
     }
   </style>
+
+  <!-- Firebase (versión compat, simple) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 </head>
 <body>
   <h1>CerveRanking 🍺</h1>
-  <div class="subtitle">Sumá un vaso cada vez que alguien se sirve de la chopera.</div>
+  <div class="subtitle">Ranking global – todos los que abren este link ven lo mismo.</div>
 
   <div class="layout">
     <!-- Panel jugadores -->
     <div class="card">
       <div class="card-header">
         <span>Jugadores</span>
-        <span class="pill">Se guarda en este dispositivo</span>
+        <span class="pill">Base de datos compartida</span>
       </div>
 
       <div class="input-row">
@@ -210,63 +213,56 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "cerveranking_players_v1";
+    // Firebase config de tu proyecto (COMPLETO Y FINAL)
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6NXEztQLqA7dQGL7gXkouvZmo7EpflUs",
+      authDomain: "cerveranking.firebaseapp.com",
+      databaseURL: "https://cerveranking-default-rtdb.firebaseio.com",
+      projectId: "cerveranking",
+      storageBucket: "cerveranking.firebasestorage.app",
+      messagingSenderId: "1056012406132",
+      appId: "1:1056012406132:web:cf4060c74e9e42b332f021"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const playersRef = db.ref("cerveranking/players");
 
     let players = [];
-
-    function loadFromStorage() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          players = JSON.parse(raw);
-        } else {
-          players = [];
-        }
-      } catch (e) {
-        players = [];
-      }
-    }
-
-    function saveToStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
-    }
 
     function addPlayer(name) {
       const trimmed = name.trim();
       if (!trimmed) return;
+
       const exists = players.some(
         (p) => p.name.toLowerCase() === trimmed.toLowerCase()
       );
-      if (!exists) {
-        players.push({ name: trimmed, count: 0 });
-        saveToStorage();
-        render();
-      }
+      if (exists) return;
+
+      const newRef = playersRef.push();
+      newRef.set({ name: trimmed, count: 0 });
     }
 
     function updateCount(index, delta) {
       if (index < 0 || index >= players.length) return;
-      const newCount = (players[index].count || 0) + delta;
-      players[index].count = Math.max(0, newCount);
-      saveToStorage();
-      render();
+      const player = players[index];
+      const newCount = Math.max(0, (player.count || 0) + delta);
+      playersRef.child(player.id).update({ count: newCount });
     }
 
-    // NUEVO: eliminar jugador
     function deletePlayer(index) {
       if (index < 0 || index >= players.length) return;
       if (!confirm("¿Seguro que querés eliminar este jugador?")) return;
-      players.splice(index, 1);
-      saveToStorage();
-      render();
+      const player = players[index];
+      playersRef.child(player.id).remove();
     }
 
     function resetAll() {
       if (!players.length) return;
       if (!confirm("¿Seguro que querés reiniciar todos los contadores?")) return;
-      players = players.map((p) => ({ ...p, count: 0 }));
-      saveToStorage();
-      render();
+      players.forEach((p) => {
+        playersRef.child(p.id).update({ count: 0 });
+      });
     }
 
     function renderPlayers() {
@@ -365,9 +361,15 @@
       renderRanking();
     }
 
-    // Inicialización
-    loadFromStorage();
-    render();
+    playersRef.on("value", (snapshot) => {
+      const data = snapshot.val() || {};
+      players = Object.entries(data).map(([id, value]) => ({
+        id,
+        name: value.name,
+        count: value.count || 0
+      }));
+      render();
+    });
 
     const nameInput = document.getElementById("nameInput");
     const addBtn = document.getElementById("addBtn");
