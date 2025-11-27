@@ -220,6 +220,20 @@
     </div>
     <div id="historyContainer"></div>
   </div>
+<!-- Panel de QR -->
+<div class="card">
+  <div class="card-header">
+    <span>Compartir la app</span>
+    <span class="pill">QR instantáneo</span>
+  </div>
+
+  <button id="generateQR" class="btn-main" style="width: 100%; margin-bottom: 12px;">
+    Generar código QR
+  </button>
+
+  <div id="qrContainer" style="text-align: center; padding-top: 12px;"></div>
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
 
   <script>
     // Config de tu proyecto Firebase
@@ -486,6 +500,27 @@
     });
 
     resetBtn.addEventListener("click", resetAll);
+    // =======================
+// Generador de Código QR
+// =======================
+const qrButton = document.getElementById("generateQR");
+const qrContainer = document.getElementById("qrContainer");
+
+qrButton.addEventListener("click", () => {
+  qrContainer.innerHTML = ""; // limpiar QR anteriores
+
+  const qr = new QRious({
+    element: document.createElement("canvas"),
+    value: "https://leokloster-droid.github.io/cerveranking/",
+    size: 220,
+    background: "#020617",
+    foreground: "#38bdf8"
+  });
+
+  qrContainer.appendChild(qr.element);
+});
+
   </script>
 </body>
 </html>
+
